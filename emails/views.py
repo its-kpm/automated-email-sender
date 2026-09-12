@@ -1,3 +1,4 @@
+from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -29,7 +30,26 @@ class EmailMessageViewSet(viewsets.ModelViewSet):
     def send(self, request, pk=None):
         message = self.get_object()
         if message.status == EmailMessage.Status.SENT:
-            return Response({"detail": "Email has already been sent."}, status=status.HTTP_409_CONFLICT)
+            return Response(
+                {"detail": "Email has already been sent."},
+                status=status.HTTP_409_CONFLICT,
+            )
+        if message.status == EmailMessage.Status.FAILED:
+            return Response(
+                {"detail": "Email delivery has permanently failed. Create a new message to retry."},
+                status=status.HTTP_409_CONFLICT,
+            )
 
-        send_email_task.delay(message.id)
-        return Response({"id": message.id, "status": "QUEUED"}, status=status.HTTP_202_ACCEPTED)
+        eta = message.scheduled_at
+        if eta and eta <= timezone.now():
+            eta = None
+
+        if eta:
+            send_email_task.apply_async(args=[message.id], eta=eta)
+        else:
+            send_email_task.delay(message.id)
+
+        response = {"id": message.id, "status": "QUEUED"}
+        if message.scheduled_at:
+            response["scheduled_at"] = message.scheduled_at
+        return Response(response, status=status.HTTP_202_ACCEPTED)
