@@ -1,3 +1,4 @@
+from datetime import timedelta
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -60,7 +61,6 @@ class EmailMessageTests(TestCase):
         self.assertEqual(message.error_message, "SMTP unavailable")
 
 
-@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 class EmailSchedulingTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="alice", password="password-123")
@@ -73,7 +73,7 @@ class EmailSchedulingTests(TestCase):
         self.message = EmailMessage.objects.create(
             template=self.template,
             recipient="user@example.com",
-            scheduled_at=timezone.now() + timezone.timedelta(minutes=10),
+            scheduled_at=timezone.now() + timedelta(minutes=10),
         )
         self.client = APIClient()
         self.client.force_authenticate(self.user)
@@ -90,7 +90,7 @@ class EmailSchedulingTests(TestCase):
 
     @patch("emails.views.send_email_task.delay")
     def test_past_scheduled_message_sends_immediately(self, delay):
-        self.message.scheduled_at = timezone.now() - timezone.timedelta(minutes=1)
+        self.message.scheduled_at = timezone.now() - timedelta(minutes=1)
         self.message.save(update_fields=["scheduled_at"])
 
         response = self.client.post(f"/api/emails/messages/{self.message.id}/send/")
