@@ -18,3 +18,8 @@ class EmailMessageSerializer(serializers.ModelSerializer):
             "attempts", "scheduled_at", "sent_at", "created_at",
         ]
         read_only_fields = ["id", "status", "error_message", "attempts", "sent_at", "created_at"]
+
+    def validate_template(self, template):
+        if template.owner_id != self.context["request"].user.id:
+            raise serializers.ValidationError("You do not have access to this template.")
+        return template

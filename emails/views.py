@@ -8,13 +8,22 @@ from .tasks import send_email_task
 
 
 class EmailTemplateViewSet(viewsets.ModelViewSet):
-    queryset = EmailTemplate.objects.all()
     serializer_class = EmailTemplateSerializer
+
+    def get_queryset(self):
+        return EmailTemplate.objects.filter(owner=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
 
 
 class EmailMessageViewSet(viewsets.ModelViewSet):
-    queryset = EmailMessage.objects.select_related("template").all()
     serializer_class = EmailMessageSerializer
+
+    def get_queryset(self):
+        return EmailMessage.objects.select_related("template").filter(
+            template__owner=self.request.user
+        )
 
     @action(detail=True, methods=["post"])
     def send(self, request, pk=None):
