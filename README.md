@@ -1,88 +1,107 @@
-# Automated Email Sender
+# Automated Email Sender - Flask
 
-An intermediate Django REST Framework project for sending emails asynchronously with Celery and Redis.
+A beginner-friendly Python project for sending and scheduling emails from a simple web interface.
 
-## Stack
-
-- Python 3.13+
-- Django
-- Django REST Framework
-- PostgreSQL (SQLite works for local development)
-- Redis
-- Celery
-- SMTP via Django email backend
+The project is intentionally small enough for a fresher to understand end-to-end, while still demonstrating Flask routes, forms, a database, SMTP email sending, scheduling, and basic error handling.
 
 ## Features
 
-- Reusable email templates
-- Recipient-specific messages
-- Template personalization with a JSON context
-- Asynchronous email delivery with Celery
-- Automatic retries with exponential backoff
-- Delivery status and attempt tracking
-- Django admin support
-- Environment-based configuration
+- Compose an email from the browser
+- Send emails immediately
+- Schedule emails for a future date/time
+- Store email history in SQLite
+- Track `PENDING`, `SENT`, and `FAILED` status
+- Retry a failed email
+- Simple responsive UI
 
-## Local setup
+## Tech Stack
+
+- Python
+- Flask
+- Flask-Mail
+- Flask-SQLAlchemy
+- SQLite
+- APScheduler
+- HTML/CSS
+
+## Project Structure
+
+```text
+automated-email-sender/
+├── app.py
+├── requirements.txt
+├── .env.example
+├── templates/
+│   └── index.html
+└── static/
+    └── style.css
+```
+
+## Run Locally
+
+### 1. Clone the repository
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\\Scripts\\activate
+git clone https://github.com/its-kpm/automated-email-sender.git
+cd automated-email-sender
+```
+
+### 2. Create a virtual environment
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+On Windows:
+
+```bash
+venv\\Scripts\\activate
+```
+
+### 3. Install dependencies
+
+```bash
 pip install -r requirements.txt
-cp .env.example .env
-python manage.py migrate
-python manage.py runserver
 ```
 
-In a second terminal, start Redis and the Celery worker:
+### 4. Configure email credentials
 
 ```bash
-celery -A config worker --loglevel=info
+cp .env.example .env
 ```
 
-The default email backend prints emails to the terminal. Add real SMTP settings to `.env` when you are ready to send real mail.
+Edit `.env` and add your SMTP email and password. For Gmail, use a Google App Password rather than your normal account password.
 
-## API
+### 5. Start the application
 
-Create a template:
-
-```http
-POST /api/emails/templates/
-Content-Type: application/json
-
-{
-  "name": "Welcome",
-  "subject": "Welcome, {{ name }}!",
-  "body": "Hello {{ name }}, welcome to our service."
-}
+```bash
+python app.py
 ```
 
-Create an email message:
+Open `http://127.0.0.1:5000`.
 
-```http
-POST /api/emails/messages/
-Content-Type: application/json
+## How It Works
 
-{
-  "template": 1,
-  "recipient": "user@example.com",
-  "context": {"name": "Alex"}
-}
-```
+1. The user fills in recipient, subject, message, and optionally a scheduled time.
+2. Flask stores the email in SQLite.
+3. Immediate emails are sent through SMTP using Flask-Mail.
+4. Future emails are registered with APScheduler.
+5. The email record is updated to `SENT` or `FAILED`.
+6. Failed emails can be retried from the history table.
 
-Queue it for asynchronous delivery:
+## Learning Goals
 
-```http
-POST /api/emails/messages/1/send/
-```
+This project is useful for learning:
 
-The API returns `202 Accepted` after the Celery task is queued.
+- Flask routing and forms
+- SQLAlchemy models
+- CRUD basics
+- Environment variables
+- SMTP email sending
+- Simple task scheduling
+- Error handling
 
-## Next milestones
+## Note
 
-1. JWT authentication and per-user ownership
-2. Scheduled campaigns with Celery Beat
-3. Bulk recipient imports
-4. Rate limiting
-5. Delivery webhooks and analytics
-6. Automated tests and CI
+The scheduler runs inside the Flask process, which is perfect for a learning project. A production system would normally use a separate task queue such as Celery or a managed scheduler.
